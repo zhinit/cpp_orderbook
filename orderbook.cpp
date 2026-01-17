@@ -1,6 +1,9 @@
 #include <cstdint>
+#include <functional>
 #include <list>
+#include <map>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 #include <format>
 #include <stdexcept>
@@ -64,12 +67,15 @@ public:
   Quantity GetInitialQuantity() const { return initialQuantity_; }
   Quantity GetRemainingQuantity() const { return remainingQuantity_; }
   Quantity GetFilledQuantity() const { return GetInitialQuantity() - GetRemainingQuantity(); }
+  bool IsFilled() const { return GetRemainingQuantity() == 0; }
+
   void Fill(Quantity quantity)
   {
     if (quantity > GetRemainingQuantity())
       throw std::logic_error(std::format("Order ({}) cannot be filled for more than its remaining quantity", GetOrderId()));
     remainingQuantity_ -= quantity;
   }
+  
 private:
   OrderType orderType_;
   OrderId orderId_;
@@ -135,6 +141,82 @@ private:
 };
 
 using Trades = std::vector<Trade>;
+
+class Orderbook
+{
+private:
+
+  struct OrderEntry
+  {
+    OrderPointer order_ { nullptr };
+    OrderPointers::iterator location_;
+  };
+  
+  std::map<Price, OrderPointers, std::greater<Price>> bids_;
+  std::map<Price, OrderPointers, std::less<Price>> asks_;
+  std::unordered_map<OrderId, OrderEntry> orders_;
+
+  bool CanMatch(Side side, Price price) const 
+  {
+    if (side == Side::Buy)
+    {
+      if (asks_.empty())
+        return false;
+
+      const auto& [bestAsk_, _] = *asks_.begin();
+      return price >= bestAsk_;
+    }
+    else
+    {
+      if (bids_.empty())
+        return false;
+
+      const auto& [bestBid_, _] = *bids_.begin();
+      return price <= bestBid_;
+    }
+  }
+
+  Trades MatchOrders ()
+  {
+    Trades trades;
+    trades.reserve(orders_.size());
+
+    while (true)
+    {
+      if (bids_.empty() || asks_.empty())
+        break;
+
+      auto& [bidPrice, bids] = *bids_.begin();
+      auto& [askPrice, asks] = *asks_.begin();
+
+      if (bidPrice < askPrice)
+        break;
+
+      while (bids_.size() && asks_.size())
+      {
+        auto& bid = bids.front();
+        auto& ask = asks.front();
+
+        Quantity quantity = std::min(bid->GetRemainingQuantity(), ask->GetRemainingQuantity());
+
+        bid->Fill(quantity);
+        ask->Fill(quantity);
+
+        if (bid->IsFilled())
+        {
+          bids.pop_front();
+          orders_.erase(bid->GetOrderId());
+        }
+
+        if (ask->IsFilled())
+        {
+          asks.pop_front();
+          orders_.erase(ask->GetOrderId());
+        }
+      }
+    }
+  }
+};
 
 int main ()
 {
