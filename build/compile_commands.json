@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/Users/hookline/coding/learning/cpp_orderbook/build",
+  "command": "/usr/bin/clang++ -g -std=c++2b -arch arm64 -o CMakeFiles/orderbook.dir/orderbook.cpp.o -c /Users/hookline/coding/learning/cpp_orderbook/orderbook.cpp",
+  "file": "/Users/hookline/coding/learning/cpp_orderbook/orderbook.cpp",
+  "output": "/Users/hookline/coding/learning/cpp_orderbook/build/CMakeFiles/orderbook.dir/orderbook.cpp.o"
+}
+]
