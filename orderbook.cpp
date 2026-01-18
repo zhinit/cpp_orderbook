@@ -299,7 +299,16 @@ public:
       if (orders.empty())
         bids_.erase(price);
     }
-
+  }
+  
+  Trades MatchOrder(OrderModify order)
+  {
+    if (!orders_.contains(order.GetOrderId()))
+      return { };
+    
+    const auto& [existingOrder, _] = orders_.at(order.GetOrderId());
+    CancelOrder(order.GetOrderId());
+    return AddOrder(order.ToOrderPointer(existingOrder->GetOrderType()));
   }
 
 };
